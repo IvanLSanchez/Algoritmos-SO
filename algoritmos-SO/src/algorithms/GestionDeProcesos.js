@@ -1,41 +1,25 @@
 /**
- * utilizan listas en paralelo
- * c = tiempo de creacion
- * t = rafagas de cpu
- * priority = prioridades
- * q = quantum (si es 0 es sin quantum)
+ * Algoritmos de planificación de procesos.
+ *
+ * Convención de parámetros (listas en paralelo, mismo índice = mismo proceso):
+ * - c: tiempos de creación/llegada
+ * - t: ráfagas de CPU (burst times)
+ * - p: prioridades (menor valor = mayor prioridad)
+ * - q: quantum (-1 = no expropiativo, 0 = expropiativo, > 0 = con quantum)
+ *
+ * Todos los algoritmos devuelven un array de pasos:
+ *   { proceso, inicio, fin, rafagasRestantes }
+ * donde `inicio` y `fin` son inclusivos y el tiempo arranca en 0.
  */
-function FCFS(c, t) {
-    const steps = [];
-    let tiempoActual = 0;
-
-    const orden = c.map((_,i) => i).sort((a,b) => c[a] - c[b])
-    
-    for(const i of orden){
-        const inicio = Math.max(tiempoActual, c[i]);
-        const fin = inicio + t[i] - 1; //usamos menos uno porque arracamos en 0
-        
-        steps.push({
-            proceso: i,
-            inicio: inicio,
-            fin: fin,
-            rafagasRestantes: 0 
-        });
-
-        tiempoActual = fin + 1;
-    }
-
-    return steps;
-}
-
-// ===== STRATEGY PATTERN PARA SJF =====
 
 /**
- * Estrategias de ejecución - cada una encapsula su lógica
- * @param {Object} ctx - Contexto: {seleccionado, t, tiemposRestantes, q}
- * @returns {{deltaFin: number, terminado: boolean}}
+ * Estrategias de ejecución: deciden cuánto avanza un proceso antes de
+ * reevaluar. Son agnósticas al algoritmo de selección.
+ *
+ * Cada estrategia recibe `{ seleccionado, t, tiemposRestantes, q }` y
+ * devuelve `{ deltaFin, terminado }`.
  */
-const estrategiasSJF = {
+const estrategiasEjecucion = {
     // q = -1: No expropiativo (corre hasta terminar)
     noPreemptive: ({seleccionado, t, tiemposRestantes}) => {
         tiemposRestantes[seleccionado] = 0;
@@ -62,44 +46,69 @@ const estrategiasSJF = {
 };
 
 /**
- * Factory: selecciona estrategia según q
- * @param {number} q - -1=no preemptive, 0=preemptive, >0=quantum
- * @returns {Function}
+ * Factory: devuelve la estrategia de ejecución según el quantum.
+ * @param {number} q - -1 = no expropiativo, 0 = expropiativo, > 0 = con quantum
+ * @returns {Function} Estrategia de ejecución
  */
-function crearEstrategiaSJF(q) {
-    if (q === -1) return estrategiasSJF.noPreemptive;
-    if (q === 0) return estrategiasSJF.preemptive;
-    return estrategiasSJF.conQuantum;
+function crearEstrategiaEjecucion(q) {
+    if (q === -1) return estrategiasEjecucion.noPreemptive;
+    if (q === 0) return estrategiasEjecucion.preemptive;
+    return estrategiasEjecucion.conQuantum;
 }
 
 /**
- * SJF con Strategy Pattern
+ * Estrategias de selección: deciden el orden de los procesos disponibles.
+ *
+ * Cada estrategia recibe `(disponibles, ctx)` y devuelve la lista ordenada
+ * (el motor toma el primero). `ctx` = { c, t, tiemposRestantes, p }.
+ */
+const estrategiasSeleccion = {
+    // FCFS: por tiempo de llegada
+    fcfs: (disponibles, {c}) =>
+        disponibles.slice().sort((a, b) => c[a] - c[b] || a - b),
+
+    // SJF: por ráfaga total, luego llegada, luego índice
+    sjf: (disponibles, {c, t}) =>
+        disponibles.slice().sort((a, b) => t[a] - t[b] || c[a] - c[b] || a - b),
+
+    // SJRF: por ráfaga restante, luego llegada, luego índice
+    sjrf: (disponibles, {c, tiemposRestantes}) =>
+        disponibles.slice().sort((a, b) => tiemposRestantes[a] - tiemposRestantes[b] || c[a] - c[b] || a - b),
+
+    // Prioridad: por prioridad (menor = más prioritario), luego llegada, luego índice
+    prioridad: (disponibles, {c, p}) =>
+        disponibles.slice().sort((a, b) => p[a] - p[b] || c[a] - c[b] || a - b)
+};
+
+/**
+ * Motor genérico de planificación: extrae el loop común a todos los
+ * algoritmos (elegir disponible, ejecutar un tramo, avanzar el reloj).
+ *
  * @param {number[]} c - Tiempos de creación/llegada
  * @param {number[]} t - Tiempos de ráfaga (burst times)
- * @param {number} q - Quantum: -1=no preemptive, 0=preemptive, >0=quantum
+ * @param {Object} opts - Opciones del planificador
+ * @param {Function} opts.seleccionar - Estrategia de selección
+ * @param {Function} opts.ejecutar - Estrategia de ejecución
+ * @param {number[]} [opts.p] - Prioridades (solo para Prioridad)
+ * @param {number} [opts.q] - Quantum (para estrategias con quantum)
  * @returns {Array} Pasos de ejecución
  */
-function SJF(c, t, q = 0) {
+function planificador(c, t, {seleccionar, ejecutar, p, q}) {
     const steps = [];
     let tiempoActual = 0;
-    
-    const estrategia = crearEstrategiaSJF(q);
-    
+
     const pendientes = c.map((_, i) => i);
     const tiemposRestantes = t.map(T => T);
-    
+
     while (pendientes.length > 0) {
         const disponibles = pendientes.filter(i => c[i] <= tiempoActual);
 
         if (disponibles.length > 0) {
-            // Ordenar por tiempo TOTAL (no restante), luego llegada, luego índice
-            disponibles.sort((a, b) => t[a] - t[b] || c[a] - c[b] || a - b);
-
-            const seleccionado = disponibles[0];
+            const ordenados = seleccionar(disponibles, {c, t, tiemposRestantes, p});
+            const seleccionado = ordenados[0];
             const inicio = tiempoActual;
 
-            // Delegar a la estrategia
-            const {deltaFin, terminado} = estrategia({
+            const {deltaFin, terminado} = ejecutar({
                 seleccionado,
                 t,
                 tiemposRestantes,
@@ -107,7 +116,7 @@ function SJF(c, t, q = 0) {
             });
 
             const fin = inicio + deltaFin;
-            
+
             steps.push({
                 proceso: seleccionado,
                 inicio,
@@ -124,14 +133,70 @@ function SJF(c, t, q = 0) {
             tiempoActual = Math.min(...pendientes.map(i => c[i]));
         }
     }
-    
+
     return steps;
 }
 
-function SJRF(c, t, q = 0){
-    const steps = [];
-    let tiempoActual = 0;
-    const conQuantum = q > 0;
+/**
+ * FCFS: First Come First Served (no expropiativo, por orden de llegada).
+ *
+ * @param {number[]} c - Tiempos de creación/llegada
+ * @param {number[]} t - Tiempos de ráfaga (burst times)
+ * @returns {Array} Pasos de ejecución
+ */
+function FCFS(c, t) {
+    return planificador(c, t, {
+        seleccionar: estrategiasSeleccion.fcfs,
+        ejecutar: estrategiasEjecucion.noPreemptive
+    });
+}
 
-    return steps;
+/**
+ * SJF: Shortest Job First (por ráfaga total).
+ *
+ * @param {number[]} c - Tiempos de creación/llegada
+ * @param {number[]} t - Tiempos de ráfaga (burst times)
+ * @param {number} q - Quantum: -1 = no expropiativo, 0 = expropiativo, > 0 = con quantum
+ * @returns {Array} Pasos de ejecución
+ */
+function SJF(c, t, q = 0) {
+    return planificador(c, t, {
+        seleccionar: estrategiasSeleccion.sjf,
+        ejecutar: crearEstrategiaEjecucion(q),
+        q
+    });
+}
+
+/**
+ * SJRF: Shortest Job Remaining First (por ráfaga restante).
+ *
+ * @param {number[]} c - Tiempos de creación/llegada
+ * @param {number[]} t - Tiempos de ráfaga (burst times)
+ * @param {number} q - Quantum: -1 = no expropiativo, 0 = expropiativo, > 0 = con quantum
+ * @returns {Array} Pasos de ejecución
+ */
+function SJRF(c, t, q = 0) {
+    return planificador(c, t, {
+        seleccionar: estrategiasSeleccion.sjrf,
+        ejecutar: crearEstrategiaEjecucion(q),
+        q
+    });
+}
+
+/**
+ * Prioridad: selección por prioridad (menor valor = mayor prioridad).
+ *
+ * @param {number[]} c - Tiempos de creación/llegada
+ * @param {number[]} t - Tiempos de ráfaga (burst times)
+ * @param {number[]} p - Prioridades
+ * @param {number} q - Quantum: -1 = no expropiativo, 0 = expropiativo, > 0 = con quantum
+ * @returns {Array} Pasos de ejecución
+ */
+function Prioridad(c, t, p, q = 0) {
+    return planificador(c, t, {
+        seleccionar: estrategiasSeleccion.prioridad,
+        ejecutar: crearEstrategiaEjecucion(q),
+        p,
+        q
+    });
 }
