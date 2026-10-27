@@ -81,6 +81,38 @@ const estrategiasSeleccion = {
 };
 
 /**
+ * Factory: crea la estrategia de selección de Round Robin.
+ *
+ * A diferencia de las demás estrategias (puras), RR necesita estado: una
+ * cola circular que recuerda el orden de rotación. En cada llamada:
+ *   1. Descarta de la cola los procesos que ya terminaron.
+ *   2. Agrega los recién llegados en orden de llegada.
+ *   3. Rota: saca el frente y lo pasa al final.
+ *
+ * @returns {Function} Estrategia de selección con estado
+ */
+function crearSeleccionRR() {
+    let cola = [];
+
+    return (disponibles, {c}) => {
+        // 1. Quitar de la cola los procesos que ya terminaron
+        cola = cola.filter(i => disponibles.includes(i));
+
+        // 2. Agregar los recién llegados en orden de llegada
+        const nuevos = disponibles
+            .filter(i => !cola.includes(i))
+            .sort((a, b) => c[a] - c[b] || a - b);
+        cola.push(...nuevos);
+
+        // 3. Rotar: el frente pasa al final
+        const seleccionado = cola.shift();
+        cola.push(seleccionado);
+
+        return [seleccionado, ...cola];
+    };
+}
+
+/**
  * Motor genérico de planificación: extrae el loop común a todos los
  * algoritmos (elegir disponible, ejecutar un tramo, avanzar el reloj).
  *
@@ -197,6 +229,22 @@ function Prioridad(c, t, p, q = 0) {
         seleccionar: estrategiasSeleccion.prioridad,
         ejecutar: crearEstrategiaEjecucion(q),
         p,
+        q
+    });
+}
+
+/**
+ * RR: Round Robin (cola circular con quantum fijo).
+ *
+ * @param {number[]} c - Tiempos de creación/llegada
+ * @param {number[]} t - Tiempos de ráfaga (burst times)
+ * @param {number} q - Quantum (debe ser > 0)
+ * @returns {Array} Pasos de ejecución
+ */
+function RR(c, t, q) {
+    return planificador(c, t, {
+        seleccionar: crearSeleccionRR(),
+        ejecutar: estrategiasEjecucion.conQuantum,
         q
     });
 }
