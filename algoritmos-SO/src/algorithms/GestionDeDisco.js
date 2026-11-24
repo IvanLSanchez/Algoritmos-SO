@@ -1,4 +1,16 @@
-function motorDisco(inicio, demanda, seleccionSiguiente, estado = {}) {
+function enDisco(pista, maxPista, mensajeError) {
+    if (pista < 0 || pista > maxPista) {
+        throw new Error(mensajeError);
+    }
+}
+
+function motorDisco(inicio, demanda, seleccionSiguiente, estado = {}, maxPista = 199) {
+    enDisco(inicio, maxPista, `La pista inicial ${inicio} esta fuera del rango valido [0, ${maxPista}].`);
+
+    for (const pista of demanda) {
+        enDisco(pista, maxPista, `La pista ${pista} de la demanda esta fuera del rango valido [0, ${maxPista}].`);
+    }
+
     const cola = [...demanda];
     const steps = [];
     let actual = inicio;
