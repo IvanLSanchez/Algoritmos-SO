@@ -1,15 +1,13 @@
-function enDisco(pista, maxPista, mensajeError) {
-    if (pista < 0 || pista > maxPista) {
-        throw new Error(mensajeError);
-    }
+const { validarEntero, validarEnteros } = require('./validaciones');
+
+function enDisco(pista, maxPista) {
+    validarEntero(pista, 'La pista', { min: 0, max: maxPista });
 }
 
 function motorDisco(inicio, demanda, seleccionSiguiente, estado = {}, maxPista = 199) {
-    enDisco(inicio, maxPista, `La pista inicial ${inicio} esta fuera del rango valido [0, ${maxPista}].`);
+    enDisco(inicio, maxPista);
 
-    for (const pista of demanda) {
-        enDisco(pista, maxPista, `La pista ${pista} de la demanda esta fuera del rango valido [0, ${maxPista}].`);
-    }
+    validarEnteros(demanda, 'La demanda', { min: 0, max: maxPista });
 
     const cola = [...demanda];
     const steps = [];
@@ -56,8 +54,8 @@ function motorDisco(inicio, demanda, seleccionSiguiente, estado = {}, maxPista =
                     break;
                 }
             }
-        } else {
-            procesarPaso(seleccion);
+        } else if (!procesarPaso(seleccion)) {
+            break;
         }
     }
 
@@ -116,25 +114,44 @@ function CSCAN(inicio, demanda, maxPista = 199) {
         inicio,
         demanda,
         (actual, cola, estado) => {
-            if (estado.fase === 'subiendo') {
-                const mayoresOIguales = cola.filter(p => p >= actual);
-
-                if (mayoresOIguales.length > 0) {
-                    return Math.min(...mayoresOIguales);
-                }
-
-                // No hay más pedidos hacia arriba: ir al extremo superior
-                estado.fase = 'saltando';
-                return { valor: maxPista, eliminar: false };
-            }
-
             if (estado.fase === 'saltando') {
-                // Del extremo superior salta al extremo inferior (no se cuenta)
+                // Salto del extremo superior (maxPista) al 0: no se cuenta
                 estado.fase = 'bajando';
                 return { valor: 0, contar: false, eliminar: false };
             }
 
-            // Fase bajando: atiende los pedidos de menor a mayor
+            if (estado.fase === 'subiendo') {
+                const mayoresOIguales = cola.filter(p => p >= actual);
+
+                if (mayoresOIguales.length > 0) {
+                    const siguiente = Math.min(...mayoresOIguales);
+
+                    // Último pedido del barrido ascendente: cerrar al extremo superior y saltar a 0
+                    if (cola.length === 1) {
+                        const pasos = [{ valor: siguiente }];
+
+                        if (siguiente < maxPista) {
+                            pasos.push({ valor: maxPista, eliminar: false });
+                        }
+
+                        pasos.push({ valor: 0, contar: false, eliminar: false });
+                        return pasos;
+                    }
+
+                    return siguiente;
+                }
+
+                // No hay más pedidos por encima: cerrar al extremo superior y saltar a 0
+                if (actual === maxPista) {
+                    estado.fase = 'bajando';
+                    return { valor: 0, contar: false, eliminar: false };
+                }
+
+                estado.fase = 'saltando';
+                return { valor: maxPista, eliminar: false };
+            }
+
+            // Fase bajando: atiende los pedidos de menor a mayor (desde 0)
             return Math.min(...cola);
         },
         { fase: 'subiendo' }

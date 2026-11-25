@@ -34,7 +34,12 @@
  * @param {Function} estrategia.formatearPaso - Construye el paso a devolver
  * @returns {Array} Pasos de ejecución
  */
+const { validarEntero, validarEnteros } = require('./validaciones');
+
 function motorMemoria(demanda, slots, { crearEstado, acierto, fallo, formatearPaso }) {
+    validarEntero(slots, 'La cantidad de marcos', { min: 1 });
+    validarEnteros(demanda, 'La demanda');
+
     const steps = [];
     const memoria = new Array(slots).fill(null);
     const estado = crearEstado(slots);

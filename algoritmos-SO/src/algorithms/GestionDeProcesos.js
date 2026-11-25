@@ -12,6 +12,8 @@
  * donde `inicio` y `fin` son inclusivos y el tiempo arranca en 0.
  */
 
+const { validarEntero, validarEnteros } = require('./validaciones');
+
 /**
  * Estrategias de ejecución: deciden cuánto avanza un proceso antes de
  * reevaluar. Son agnósticas al algoritmo de selección.
@@ -126,6 +128,21 @@ function crearSeleccionRR() {
  * @returns {Array} Pasos de ejecución
  */
 function planificador(c, t, {seleccionar, ejecutar, p, q}) {
+    if (!Array.isArray(c) || !Array.isArray(t)) {
+        throw new Error('Los tiempos de llegada y rafagas deben ser arreglos.');
+    }
+    if (c.length !== t.length) {
+        throw new Error('Los arreglos de llegada y rafagas deben tener la misma longitud.');
+    }
+    validarEnteros(c, 'Los tiempos de llegada', { min: 0 });
+    validarEnteros(t, 'Las rafagas', { min: 1 });
+    if (p !== undefined) {
+        if (!Array.isArray(p) || p.length !== t.length) {
+            throw new Error('Las prioridades deben ser un arreglo de la misma longitud que las rafagas.');
+        }
+        validarEnteros(p, 'Las prioridades');
+    }
+
     const steps = [];
     let tiempoActual = 0;
 
@@ -242,6 +259,8 @@ function Prioridad(c, t, p, q = 0) {
  * @returns {Array} Pasos de ejecución
  */
 function RR(c, t, q) {
+    validarEntero(q, 'El quantum', { min: 1 });
+
     return planificador(c, t, {
         seleccionar: crearSeleccionRR(),
         ejecutar: estrategiasEjecucion.conQuantum,
