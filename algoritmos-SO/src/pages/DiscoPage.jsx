@@ -174,7 +174,7 @@ export default function DiscoPage() {
             <label>Pista inicial</label>
             <input value={inicioTxt} onChange={(e) => setInicioTxt(e.target.value)} placeholder="50" />
           </div>
-          <div className="field" style={{ gridColumn: 'span 2' }}>
+          <div className="field field-wide">
             <label>Demanda de pistas</label>
             <input value={demandaTxt} onChange={(e) => setDemandaTxt(e.target.value)} placeholder={EJEMPLO.demanda} />
           </div>
@@ -192,7 +192,8 @@ export default function DiscoPage() {
             <input value={maxPistaTxt} onChange={(e) => setMaxPistaTxt(e.target.value)} placeholder="199" />
             <div className="hint">Extremo del disco (para SCAN / C-SCAN)</div>
           </div>
-          <div className="field">
+          <div className="field field-action">
+            <label aria-hidden="true">&nbsp;</label>
             <button className="btn btn-primary" onClick={simular}>▶ Simular</button>
           </div>
         </div>

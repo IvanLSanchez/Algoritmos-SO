@@ -44,11 +44,12 @@ function motorMemoria(demanda, slots, { crearEstado, acierto, fallo, formatearPa
     const memoria = new Array(slots).fill(null);
     const estado = crearEstado(slots);
 
-    for (const pagina of demanda) {
+    for (let i = 0; i < demanda.length; i++) {
+        const pagina = demanda[i];
         const indice = memoria.indexOf(pagina);
         const paso = indice !== -1
-            ? acierto({ memoria, estado, indice, pagina, slots })
-            : fallo({ memoria, estado, pagina, slots });
+            ? acierto({ memoria, estado, indice, pagina, slots, paso: i })
+            : fallo({ memoria, estado, pagina, slots, paso: i });
 
         steps.push(formatearPaso({ memoria, estado, paso }));
     }
@@ -96,23 +97,21 @@ function FIFO(demanda, slots) {
  * Reemplaza la página que hace más tiempo no se consulta.
  */
 function LRU(demanda, slots) {
-    let tiempo = 0;
-
     return motorMemoria(demanda, slots, {
         crearEstado: () => ({ ultimaConsulta: new Array(slots).fill(-1) }),
 
-        acierto: ({ estado, indice }) => {
-            estado.ultimaConsulta[indice] = tiempo;
+        acierto: ({ estado, indice, paso }) => {
+            estado.ultimaConsulta[indice] = paso;
             return {
                 puntero: indice,
                 fallo: false
             };
         },
 
-        fallo: ({ memoria, estado, pagina }) => {
+        fallo: ({ memoria, estado, pagina, paso }) => {
             const indice = estado.ultimaConsulta.indexOf(Math.min(...estado.ultimaConsulta));
             memoria[indice] = pagina;
-            estado.ultimaConsulta[indice] = tiempo;
+            estado.ultimaConsulta[indice] = paso;
 
             return {
                 puntero: indice,
@@ -143,7 +142,7 @@ function LRU(demanda, slots) {
  */
 function reloj(demanda, slots) {
     return motorMemoria(demanda, slots, {
-        crearEstado: () => ({ vidas: new Array(slots).fill(0), puntero: 0 }),
+        crearEstado: () => ({ vidas: new Array(slots).fill(0), puntero: slots - 1 }),
 
         acierto: ({ estado, indice }) => {
             estado.vidas[indice] = 1;
@@ -154,26 +153,23 @@ function reloj(demanda, slots) {
         },
 
         fallo: ({ memoria, estado, pagina, slots }) => {
-            let avances = 0;
-            let indice = estado.puntero;
+            // Empezar a buscar desde el siguiente al último insertado
+            let indice = (estado.puntero + 1) % slots;
 
-            while (avances < slots) {
-                indice = indice % slots;
-
+            while (true) {
                 if (estado.vidas[indice] === 0) {
                     memoria[indice] = pagina;
                     estado.vidas[indice] = 1;
-                    estado.puntero = (indice + 1) % slots;
+                    estado.puntero = indice;
                     break;
                 }
 
                 estado.vidas[indice] = 0;
-                indice++;
-                avances++;
+                indice = (indice + 1) % slots;
             }
 
             return {
-                puntero: (estado.puntero - 1 + slots) % slots,
+                puntero: indice,
                 fallo: true
             };
         },

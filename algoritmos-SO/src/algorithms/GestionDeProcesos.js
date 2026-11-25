@@ -85,32 +85,29 @@ const estrategiasSeleccion = {
 /**
  * Factory: crea la estrategia de selección de Round Robin.
  *
- * A diferencia de las demás estrategias (puras), RR necesita estado: una
- * cola circular que recuerda el orden de rotación. En cada llamada:
- *   1. Descarta de la cola los procesos que ya terminaron.
- *   2. Agrega los recién llegados en orden de llegada.
- *   3. Rota: saca el frente y lo pasa al final.
+ * A diferencia de las demás estrategias (puras), RR necesita estado: recuerda
+ * el último proceso ejecutado y recorre la lista de procesos de forma cíclica
+ * (A→B→C→...→A). En cada llamada elige, entre los disponibles, el siguiente
+ * en el ciclo después del último ejecutado.
  *
  * @returns {Function} Estrategia de selección con estado
  */
 function crearSeleccionRR() {
-    let cola = [];
+    let ultimoEjecutado = -1;
 
-    return (disponibles, {c}) => {
-        // 1. Quitar de la cola los procesos que ya terminaron
-        cola = cola.filter(i => disponibles.includes(i));
-
-        // 2. Agregar los recién llegados en orden de llegada
-        const nuevos = disponibles
-            .filter(i => !cola.includes(i))
-            .sort((a, b) => c[a] - c[b] || a - b);
-        cola.push(...nuevos);
-
-        // 3. Rotar: el frente pasa al final
-        const seleccionado = cola.shift();
-        cola.push(seleccionado);
-
-        return [seleccionado, ...cola];
+    return (disponibles, {t}) => {
+        const n = t.length;
+        // Buscar el siguiente disponible en el ciclo a partir del último ejecutado
+        let seleccionado = disponibles[0];
+        for (let paso = 1; paso <= n; paso++) {
+            const candidato = (ultimoEjecutado + paso) % n;
+            if (disponibles.includes(candidato)) {
+                seleccionado = candidato;
+                break;
+            }
+        }
+        ultimoEjecutado = seleccionado;
+        return [seleccionado];
     };
 }
 

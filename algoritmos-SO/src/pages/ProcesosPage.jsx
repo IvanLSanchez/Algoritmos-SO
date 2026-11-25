@@ -201,7 +201,8 @@ export default function ProcesosPage() {
               </div>
             </div>
           )}
-          <div className="field">
+          <div className="field field-action">
+            <label aria-hidden="true">&nbsp;</label>
             <button className="btn btn-primary" onClick={simular}>▶ Simular</button>
           </div>
         </div>

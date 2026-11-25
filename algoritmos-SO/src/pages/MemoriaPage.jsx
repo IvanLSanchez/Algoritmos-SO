@@ -100,7 +100,7 @@ export default function MemoriaPage() {
           ))}
         </div>
         <div className="form-grid">
-          <div className="field" style={{ gridColumn: 'span 2' }}>
+          <div className="field field-wide">
             <label>Demanda de páginas</label>
             <input value={demandaTxt} onChange={(e) => setDemandaTxt(e.target.value)} placeholder={EJEMPLO.demanda} />
             <div className="hint">Secuencia de páginas referenciadas</div>
@@ -109,7 +109,8 @@ export default function MemoriaPage() {
             <label>Marcos (slots)</label>
             <input value={marcosTxt} onChange={(e) => setMarcosTxt(e.target.value)} placeholder="4" />
           </div>
-          <div className="field">
+          <div className="field field-action">
+            <label aria-hidden="true">&nbsp;</label>
             <button className="btn btn-primary" onClick={simular}>▶ Simular</button>
           </div>
         </div>
