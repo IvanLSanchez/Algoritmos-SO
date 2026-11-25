@@ -1,4 +1,4 @@
-const { validarEntero, validarEnteros } = require('./validaciones');
+import { validarEntero, validarEnteros } from './validaciones.js';
 
 function enDisco(pista, maxPista) {
     validarEntero(pista, 'La pista', { min: 0, max: maxPista });
@@ -207,7 +207,7 @@ function CLOOK(inicio, demanda, direccionInicial = 'derecha') {
     );
 }
 
-module.exports = {
+export {
     motorDisco,
     FIFO,
     SSTF,

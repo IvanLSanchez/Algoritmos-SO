@@ -12,7 +12,7 @@
  * donde `inicio` y `fin` son inclusivos y el tiempo arranca en 0.
  */
 
-const { validarEntero, validarEnteros } = require('./validaciones');
+import { validarEntero, validarEnteros } from './validaciones.js';
 
 /**
  * Estrategias de ejecución: deciden cuánto avanza un proceso antes de
@@ -267,3 +267,5 @@ function RR(c, t, q) {
         q
     });
 }
+
+export { FCFS, SJF, SJRF, Prioridad, RR };

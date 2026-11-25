@@ -34,7 +34,7 @@
  * @param {Function} estrategia.formatearPaso - Construye el paso a devolver
  * @returns {Array} Pasos de ejecución
  */
-const { validarEntero, validarEnteros } = require('./validaciones');
+import { validarEntero, validarEnteros } from './validaciones.js';
 
 function motorMemoria(demanda, slots, { crearEstado, acierto, fallo, formatearPaso }) {
     validarEntero(slots, 'La cantidad de marcos', { min: 1 });
@@ -187,5 +187,5 @@ function reloj(demanda, slots) {
     });
 }
 
-module.exports = { FIFO, LRU, reloj };
+export { FIFO, LRU, reloj };
 

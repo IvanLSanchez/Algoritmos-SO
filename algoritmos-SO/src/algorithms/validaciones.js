@@ -38,4 +38,4 @@ function validarEnteros(valores, nombre, { min, max } = {}) {
     }
 }
 
-module.exports = { validarEntero, validarEnteros };
+export { validarEntero, validarEnteros };
